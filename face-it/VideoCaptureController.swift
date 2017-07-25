@@ -24,8 +24,8 @@ class VideoCaptureController: UIViewController {
         do {
             try videoCapture!.startCapturing(self.view)
         }
-        catch {
-            // Error
+        catch let ex {
+            NSLog("Unable to start capturing \(ex)")
         }
     }
     
@@ -33,18 +33,15 @@ class VideoCaptureController: UIViewController {
         videoCapture!.stopCapturing()
     }
     
-    @IBAction func touchDown(sender: AnyObject) {
+    @IBAction func touchUp(_ sender: AnyObject) {
         let button = sender as! UIButton
-        button.setTitle("Stop", for: .normal)
-        
-        startCapturing()
-    }
-    
-    @IBAction func touchUp(sender: AnyObject) {
-        let button = sender as! UIButton
-        button.setTitle("Start", for: .normal)
-        
-        stopCapturing()
+        if videoCapture!.isCapturing {
+            button.setTitle("Start", for: .normal)
+            stopCapturing()
+        } else {
+            button.setTitle("Stop", for: .normal)
+            startCapturing()
+        }
     }
     
 }
