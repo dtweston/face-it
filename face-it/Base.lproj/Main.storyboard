@@ -25,9 +25,7 @@
                                 <rect key="frame" x="495" y="688" width="34" height="30"/>
                                 <state key="normal" title="Start"/>
                                 <connections>
-                                    <action selector="touchDownWithSender:" destination="BYZ-38-t0r" eventType="touchDown" id="Fgh-yb-Bc1"/>
-                                    <action selector="touchUpWithSender:" destination="BYZ-38-t0r" eventType="touchUpInside" id="VAQ-dr-PcP"/>
-                                    <action selector="touchUpWithSender:" destination="BYZ-38-t0r" eventType="touchUpOutside" id="rEC-TW-Ayd"/>
+                                    <action selector="touchUp:" destination="BYZ-38-t0r" eventType="touchUpInside" id="SeA-7G-l7R"/>
                                 </connections>
                             </button>
                         </subviews>
