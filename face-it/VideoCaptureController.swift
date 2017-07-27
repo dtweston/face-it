@@ -15,6 +15,10 @@ class VideoCaptureController: UIViewController {
     override func viewDidLoad() {
         videoCapture = VideoCapture()
     }
+
+    override func viewDidAppear(_ animated: Bool) {
+        startCapturing()
+    }
     
     override func didReceiveMemoryWarning() {
         stopCapturing()
