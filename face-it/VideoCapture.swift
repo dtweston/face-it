@@ -12,12 +12,18 @@ import UIKit
 import CoreMotion
 import ImageIO
 
+protocol VideoCaptureDelegate: class {
+    func captureDidFindFace(_ videoCapture: VideoCapture)
+    func captureDidLoseFace(_ videoCapture: VideoCapture)
+}
+
 class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     var isCapturing: Bool = false
     var session: AVCaptureSession?
     var device: AVCaptureDevice?
     var input: AVCaptureInput?
     var preview: CALayer?
+    weak var delegate: VideoCaptureDelegate?
     var faceDetector: FaceDetector?
     var dataOutput: AVCaptureVideoDataOutput?
     var dataOutputQueue: DispatchQueue?
@@ -178,8 +184,11 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         removeFeatureViews()
         
         if (features.count == 0 || cleanAperture == CGRect.zero || !isCapturing) {
+            delegate?.captureDidLoseFace(self)
             return
         }
+
+        delegate?.captureDidFindFace(self)
         
         for feature in features {
             let faceFeature = feature as? CIFaceFeature

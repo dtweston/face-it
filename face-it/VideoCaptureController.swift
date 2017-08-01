@@ -9,14 +9,18 @@
 import Foundation
 import UIKit
 
-class VideoCaptureController: UIViewController {
+class VideoCaptureController: UIViewController, VideoCaptureDelegate {
+    @IBOutlet weak var statusLabel: UILabel!
+
     var videoCapture: VideoCapture?
     
     override func viewDidLoad() {
         videoCapture = VideoCapture()
+        videoCapture?.delegate = self
     }
 
     override func viewDidAppear(_ animated: Bool) {
+        statusLabel.layer.zPosition = 1
         startCapturing()
     }
     
@@ -47,5 +51,14 @@ class VideoCaptureController: UIViewController {
             startCapturing()
         }
     }
-    
+
+    // MARK - VideoCaptureDelegate
+
+    func captureDidFindFace(_ videoCapture: VideoCapture) {
+        statusLabel.text = " Found a face! "
+    }
+
+    func captureDidLoseFace(_ videoCapture: VideoCapture) {
+        statusLabel.text = " Looking . . . "
+    }
 }
