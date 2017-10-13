@@ -129,9 +129,9 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         return self.faceDetector!.getFacialFeaturesFromImage(image, options: imageOptions)
     }
     
-    fileprivate func transformFacialFeaturePosition(_ xPosition: CGFloat, yPosition: CGFloat, videoRect: CGRect, previewRect: CGRect, isMirrored: Bool) -> CGRect {
+    fileprivate func transformFacialFeature(position: CGPoint, videoRect: CGRect, previewRect: CGRect, isMirrored: Bool) -> CGRect {
     
-        var featureRect = CGRect(origin: CGPoint(x: xPosition, y: yPosition), size: CGSize(width: 0, height: 0))
+        var featureRect = CGRect(origin: position, size: CGSize(width: 0, height: 0))
         let widthScale = previewRect.size.width / videoRect.size.height
         let heightScale = previewRect.size.height / videoRect.size.width
         
@@ -165,14 +165,14 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         }
     }
     
-    fileprivate func addEyeViewToPreview(_ xPosition: CGFloat, yPosition: CGFloat, cleanAperture: CGRect) {
+    fileprivate func addEyeViewToPreview(at position: CGPoint, cleanAperture: CGRect) {
         let eyeView = getFeatureView()
         let isMirrored = preview!.contentsAreFlipped()
         let previewBox = preview!.frame
         
         previewView!.addSubview(eyeView)
         
-        var eyeFrame = transformFacialFeaturePosition(xPosition, yPosition: yPosition, videoRect: cleanAperture, previewRect: previewBox, isMirrored: isMirrored)
+        var eyeFrame = transformFacialFeature(position: position, videoRect: cleanAperture, previewRect: previewBox, isMirrored: isMirrored)
         
         eyeFrame.origin.x -= 37
         eyeFrame.origin.y -= 37
@@ -195,12 +195,12 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             
             if (faceFeature!.hasLeftEyePosition) {
                 
-                addEyeViewToPreview(faceFeature!.leftEyePosition.x, yPosition: faceFeature!.leftEyePosition.y, cleanAperture: cleanAperture)
+                addEyeViewToPreview(at: faceFeature!.leftEyePosition, cleanAperture: cleanAperture)
             }
             
             if (faceFeature!.hasRightEyePosition) {
                 
-                addEyeViewToPreview(faceFeature!.rightEyePosition.x, yPosition: faceFeature!.rightEyePosition.y, cleanAperture: cleanAperture)
+                addEyeViewToPreview(at: faceFeature!.rightEyePosition, cleanAperture: cleanAperture)
             }
             
         }
