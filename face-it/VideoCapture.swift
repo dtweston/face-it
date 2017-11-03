@@ -43,6 +43,10 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         
         faceDetector = FaceDetector()
     }
+
+    fileprivate lazy var heartImage: CIImage = {
+        return CIImage(image: #imageLiteral(resourceName: "heart"))!
+    }()
     
     fileprivate func setSessionPreset() throws {
         if (session!.canSetSessionPreset(AVCaptureSessionPreset640x480)) {
@@ -206,13 +210,48 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         }
         
     }
+
+    func modifyImage(base: CIImage?, hasEye: Bool, position: CGPoint) -> CIImage? {
+        let halfWidth = heartImage.extent.width / 2
+        let halfHeight = heartImage.extent.height / 2
+
+        if hasEye {
+            let transform = CGAffineTransform(translationX: position.x - halfWidth, y: position.y - halfHeight)
+            let transformFilter = CIFilter(name: "CIAffineTransform")!
+
+            transformFilter.setValue(heartImage, forKey: kCIInputImageKey)
+            transformFilter.setValue(NSValue(cgAffineTransform: transform), forKey: kCIInputTransformKey)
+
+            if let transformResult = transformFilter.value(forKey: kCIOutputImageKey) as? CIImage {
+                let compositeFilter = CIFilter(name: "CISourceOverCompositing")!
+                compositeFilter.setValue(transformResult, forKey: kCIInputImageKey)
+                compositeFilter.setValue(base, forKey: kCIInputBackgroundImageKey)
+                return compositeFilter.value(forKey: kCIOutputImageKey) as? CIImage
+            }
+        }
+
+        return base
+    }
+
+    func updateWithImage(_ image: CIImage?) {
+        DispatchQueue.main.async {
+
+        }
+    }
     
     func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
-        
+
         let image = getImageFromBuffer(sampleBuffer)
-        
+
         let features = getFacialFeaturesFromImage(image)
-        
+
+        if let faceFeature = features.first as? CIFaceFeature {
+            let imageWithLeftEye = modifyImage(base: image, hasEye: faceFeature.hasLeftEyePosition, position: faceFeature.leftEyePosition)
+            let imageWithBothEyes = modifyImage(base: imageWithLeftEye, hasEye: faceFeature.hasRightEyePosition, position: faceFeature.rightEyePosition)
+
+            updateWithImage(imageWithBothEyes)
+        }
+
         let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer)
         
         let cleanAperture = CMVideoFormatDescriptionGetCleanAperture(formatDescription!, false)
