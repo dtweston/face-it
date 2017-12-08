@@ -15,6 +15,7 @@ import ImageIO
 protocol VideoCaptureDelegate: class {
     func captureDidFindFace(_ videoCapture: VideoCapture)
     func captureDidLoseFace(_ videoCapture: VideoCapture)
+    func captureDidGenerateFrame(_ image: CIImage)
 }
 
 class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
@@ -49,8 +50,8 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     }()
     
     fileprivate func setSessionPreset() throws {
-        if (session!.canSetSessionPreset(AVCaptureSessionPreset640x480)) {
-            session!.sessionPreset = AVCaptureSessionPreset640x480
+        if (session!.canSetSessionPreset(AVCaptureSessionPresetPhoto)) {
+            session!.sessionPreset = AVCaptureSessionPresetPhoto
         }
         else {
             throw VideoCaptureError.sessionPresetNotAvailable
@@ -100,8 +101,8 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         var videoSettings = [AnyHashable: Any]()
         videoSettings[kCVPixelBufferPixelFormatTypeKey as AnyHashable] = Int(CInt(kCVPixelFormatType_32BGRA))
         
-        self.dataOutput!.videoSettings = videoSettings
-        self.dataOutput!.alwaysDiscardsLateVideoFrames = true
+//        self.dataOutput!.videoSettings = videoSettings
+//        self.dataOutput!.alwaysDiscardsLateVideoFrames = true
         
         self.dataOutputQueue = DispatchQueue(label: "VideoDataOutputQueue", attributes: [])
         
@@ -234,12 +235,15 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     func updateWithImage(_ image: CIImage?) {
+        guard let image = image else { return }
         DispatchQueue.main.async {
-
+            self.delegate?.captureDidGenerateFrame(image)
         }
     }
     
     func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
+
+        connection.videoOrientation = .portrait
 
         let image = getImageFromBuffer(sampleBuffer)
 
@@ -251,14 +255,14 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
 
             updateWithImage(imageWithBothEyes)
         }
-
-        let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer)
-        
-        let cleanAperture = CMVideoFormatDescriptionGetCleanAperture(formatDescription!, false)
-        
-        DispatchQueue.main.async {
-            self.alterPreview(features, cleanAperture: cleanAperture)
-        }
+//
+//        let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer)
+//
+//        let cleanAperture = CMVideoFormatDescriptionGetCleanAperture(formatDescription!, false)
+//
+//        DispatchQueue.main.async {
+//            self.alterPreview(features, cleanAperture: cleanAperture)
+//        }
     }
     
     func startCapturing(_ previewView: UIView) throws {
@@ -278,8 +282,8 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         
         try addDataOutputToSession()
         
-        addPreviewToView(self.previewView!)
-        
+//        addPreviewToView(self.previewView!)
+
         session!.startRunning()
     }
     

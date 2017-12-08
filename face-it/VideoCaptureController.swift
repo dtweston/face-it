@@ -7,14 +7,26 @@
 //
 
 import Foundation
+import GLKit
 import UIKit
 
 class VideoCaptureController: UIViewController, VideoCaptureDelegate {
     @IBOutlet weak var statusLabel: UILabel!
 
+    let eaglContext = EAGLContext(api: .openGLES2)!
     var videoCapture: VideoCapture?
+    fileprivate var latestImage: CIImage?
+
+    var imageView: GLKView?
+
+    lazy var ciContext: CIContext = { [unowned self] in
+        return CIContext(eaglContext: self.eaglContext)
+    }()
     
     override func viewDidLoad() {
+        imageView = GLKView(frame: view.bounds, context: eaglContext)
+        imageView?.delegate = self
+        view.addSubview(imageView!)
         videoCapture = VideoCapture()
         videoCapture?.delegate = self
     }
@@ -60,5 +72,17 @@ class VideoCaptureController: UIViewController, VideoCaptureDelegate {
 
     func captureDidLoseFace(_ videoCapture: VideoCapture) {
         statusLabel.text = " Looking . . . "
+    }
+
+    func captureDidGenerateFrame(_ image: CIImage) {
+        latestImage = image
+        imageView?.setNeedsDisplay()
+    }
+}
+
+extension VideoCaptureController: GLKViewDelegate {
+    func glkView(_ view: GLKView, drawIn rect: CGRect) {
+        guard let latestImage = latestImage else { return }
+        ciContext.draw(latestImage, in: CGRect(x: 0, y: 0, width: view.drawableWidth, height: view.drawableHeight), from: latestImage.extent)
     }
 }
