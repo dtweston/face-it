@@ -23,13 +23,11 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     var session: AVCaptureSession?
     var device: AVCaptureDevice?
     var input: AVCaptureInput?
-    var preview: CALayer?
     weak var delegate: VideoCaptureDelegate?
     var faceDetector: FaceDetector?
     var dataOutput: AVCaptureVideoDataOutput?
     var dataOutputQueue: DispatchQueue?
-    var previewView: UIView?
-    
+
     enum VideoCaptureError: Error {
         case sessionPresetNotAvailable
         case inputDeviceNotAvailable
@@ -75,26 +73,13 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             throw VideoCaptureError.inputCouldNotBeAddedToSession
         }
     }
-    
-    fileprivate func addPreviewToView(_ view: UIView) {
-        self.preview = AVCaptureVideoPreviewLayer(session: session!)
-        self.preview!.frame = view.bounds
-        
-        view.layer.addSublayer(self.preview!)
-    }
-    
+
     fileprivate func stopSession() {
         if let runningSession = session {
             runningSession.stopRunning()
         }
     }
     
-    fileprivate func removePreviewFromView() {
-        if let previewLayer = preview {
-            previewLayer.removeFromSuperlayer()
-        }
-    }
-
     fileprivate func setDataOutput() {
         self.dataOutput = AVCaptureVideoDataOutput()
         
@@ -150,68 +135,6 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         return featureRect
     }
 
-    
-    fileprivate func getFeatureView() -> UIView {
-        let heartView = Bundle.main.loadNibNamed("HeartView", owner: self, options: nil)?[0] as? UIView
-        heartView!.backgroundColor = UIColor.clear
-        heartView!.layer.removeAllAnimations()
-        heartView!.tag = 1001
-        
-        return heartView!
-    }
-    
-    fileprivate func removeFeatureViews() {
-        if let pv = previewView {
-            for view in pv.subviews {
-                if (view.tag == 1001) {
-                    view.removeFromSuperview()
-                }
-            }
-        }
-    }
-    
-    fileprivate func addEyeViewToPreview(at position: CGPoint, cleanAperture: CGRect) {
-        let eyeView = getFeatureView()
-        let isMirrored = preview!.contentsAreFlipped()
-        let previewBox = preview!.frame
-        
-        previewView!.addSubview(eyeView)
-        
-        var eyeFrame = transformFacialFeature(position: position, videoRect: cleanAperture, previewRect: previewBox, isMirrored: isMirrored)
-        
-        eyeFrame.origin.x -= 37
-        eyeFrame.origin.y -= 37
-        
-        eyeView.frame = eyeFrame
-    }
-    
-    fileprivate func alterPreview(_ features: [CIFeature], cleanAperture: CGRect) {
-        removeFeatureViews()
-        
-        if (features.count == 0 || cleanAperture == CGRect.zero || !isCapturing) {
-            delegate?.captureDidLoseFace(self)
-            return
-        }
-
-        delegate?.captureDidFindFace(self)
-        
-        for feature in features {
-            let faceFeature = feature as? CIFaceFeature
-            
-            if (faceFeature!.hasLeftEyePosition) {
-                
-                addEyeViewToPreview(at: faceFeature!.leftEyePosition, cleanAperture: cleanAperture)
-            }
-            
-            if (faceFeature!.hasRightEyePosition) {
-                
-                addEyeViewToPreview(at: faceFeature!.rightEyePosition, cleanAperture: cleanAperture)
-            }
-            
-        }
-        
-    }
-
     func modifyImage(base: CIImage?, hasEye: Bool, position: CGPoint) -> CIImage? {
         let halfWidth = heartImage.extent.width / 2
         let halfHeight = heartImage.extent.height / 2
@@ -250,25 +173,23 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let features = getFacialFeaturesFromImage(image)
 
         if let faceFeature = features.first as? CIFaceFeature {
+            DispatchQueue.main.async {
+                self.delegate?.captureDidFindFace(self)
+            }
             let imageWithLeftEye = modifyImage(base: image, hasEye: faceFeature.hasLeftEyePosition, position: faceFeature.leftEyePosition)
             let imageWithBothEyes = modifyImage(base: imageWithLeftEye, hasEye: faceFeature.hasRightEyePosition, position: faceFeature.rightEyePosition)
 
             updateWithImage(imageWithBothEyes)
+        } else {
+            DispatchQueue.main.async {
+                self.delegate?.captureDidLoseFace(self)
+            }
+            updateWithImage(image)
         }
-//
-//        let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer)
-//
-//        let cleanAperture = CMVideoFormatDescriptionGetCleanAperture(formatDescription!, false)
-//
-//        DispatchQueue.main.async {
-//            self.alterPreview(features, cleanAperture: cleanAperture)
-//        }
     }
     
-    func startCapturing(_ previewView: UIView) throws {
+    func startCapturing() throws {
         isCapturing = true
-        
-        self.previewView = previewView
         
         self.session = AVCaptureSession()
         
@@ -282,8 +203,6 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         
         try addDataOutputToSession()
         
-//        addPreviewToView(self.previewView!)
-
         session!.startRunning()
     }
     
@@ -291,16 +210,10 @@ class VideoCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         isCapturing = false
         
         stopSession()
-        
-        removePreviewFromView()
-        
-        removeFeatureViews()
-        
-        preview = nil
+
         dataOutput = nil
         dataOutputQueue = nil
         session = nil
-        previewView = nil
     }
 }
 

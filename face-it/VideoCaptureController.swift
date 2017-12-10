@@ -42,7 +42,7 @@ class VideoCaptureController: UIViewController, VideoCaptureDelegate {
     
     func startCapturing() {
         do {
-            try videoCapture!.startCapturing(self.view)
+            try videoCapture!.startCapturing()
         }
         catch let ex {
             NSLog("Unable to start capturing \(ex)")
